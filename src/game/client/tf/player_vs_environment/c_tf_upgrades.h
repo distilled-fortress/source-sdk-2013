@@ -10,6 +10,7 @@
 
 
 #include "c_baseentity.h"
+#include "tf_upgrades_shared.h"
 #include "networkvar.h"
 #include "econ_item_constants.h"
 #include "tf_shareddefs.h"
@@ -105,6 +106,7 @@ public:
 	char m_szAttribName[MAX_ATTRIBUTE_DESCRIPTION_LENGTH];
 
 	bool m_bInspectMode;
+	bool m_bPrerequrites;
 
 	CPanelAnimationVarAliasType( int, m_iUpgradeButtonXPos, "upgradebutton_xpos", "0", "proportional_int" );
 	CPanelAnimationVarAliasType( int, m_iUpgradeButtonYPos, "upgradebutton_ypos", "0", "proportional_int" );
@@ -197,6 +199,7 @@ protected:
 	void			UpdateModelPanels( void );
 	virtual void	SetBorderForItem( CItemModelPanel *pItemPanel, bool bMouseOver );
 	void			UpgradeItemInSlot( int iSlot );
+	bool			HasUpgrade( C_TFPlayer *pPlayer, int iLoadoutSlot, CMannVsMachineUpgrades *pUpgrade );
 	void			UpdateUpgradeButtons( void );
 	void			UpdateButtonStates( int nCurrentCurrency, int nUpgrade = 0, int nNumPurchased = 0 );
 	void			UpdateJoystickControls( void );

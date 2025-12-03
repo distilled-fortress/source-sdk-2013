@@ -2306,6 +2306,8 @@ m_bIsPackBundle( false ),
 m_pOwningPackBundle( NULL ),
 m_bIsPackItem( false ),
 m_bBaseItem( false ),
+m_bCustomItem( false ),
+m_bWhitelisted( false ),
 m_pszItemLogClassname( NULL ),
 m_pszItemIconClassname( NULL ),
 m_pszDatabaseAuditTable( NULL ),
@@ -3177,6 +3179,8 @@ bool CEconItemDefinition::BInitFromKV( KeyValues *pKVItem, CUtlVector<CUtlString
 	m_bHidden = m_pKVItem->GetInt( "hidden", 0 ) != 0;
 	m_bShouldShowInArmory = m_pKVItem->GetInt( "show_in_armory", 0 ) != 0;
 	m_bBaseItem = m_pKVItem->GetInt( "baseitem", 0 ) != 0;
+	m_bCustomItem = m_pKVItem->GetInt("customitem", 0) != 0;
+	m_bWhitelisted = m_pKVItem->GetInt( "whitelisted" , 0 ) != 0;
 	m_pszItemLogClassname = m_pKVItem->GetString( "item_logname", NULL );
 	m_pszItemIconClassname = m_pKVItem->GetString( "item_iconname", NULL );
 	m_pszDatabaseAuditTable = m_pKVItem->GetString( "database_audit_table", NULL );
@@ -3805,6 +3809,8 @@ CEconItemSchema::CEconItemSchema( )
 ,	m_mapToolsItems( DefLessFunc(int) )
 ,	m_mapPaintKitTools( DefLessFunc(uint32) )
 ,	m_mapBaseItems( DefLessFunc(int) )
+,	m_mapCustomItems( DefLessFunc(int) )
+,	m_mapWhitelistedItems( DefLessFunc(int) )
 ,	m_unVersion( 0 )
 #if defined(CLIENT_DLL) || defined(GAME_DLL)
 ,	m_pDefaultItemDefinition( NULL )
@@ -4299,6 +4305,8 @@ void CEconItemSchema::Reset( void )
 	m_mapToolsItems.Purge();
 	m_mapPaintKitTools.Purge();
 	m_mapBaseItems.Purge();
+	m_mapCustomItems.Purge();
+	m_mapWhitelistedItems.Purge();
 	m_mapRecipes.PurgeAndDeleteElements();
 	m_vecTimedRewards.Purge();
 	m_dictItemSets.PurgeAndDeleteElements();
@@ -4418,7 +4426,7 @@ bool CEconItemSchema::BInitTextBuffer( CUtlBuffer &buffer, CUtlVector<CUtlString
 
 	Reset();
 	m_pKVRawDefinition = new KeyValues( "CEconItemSchema" );
-	if ( m_pKVRawDefinition->LoadFromBuffer( NULL, buffer ) )
+	if ( m_pKVRawDefinition->LoadFromFile(g_pFullFileSystem, "scripts/items/items_mod.txt", "GAME"))
 	{
 		return BInitSchema( m_pKVRawDefinition, pVecErrors )
 			&& BPostSchemaInit( pVecErrors );
@@ -5273,6 +5281,8 @@ bool CEconItemSchema::BInitItems( KeyValues *pKVItems, CUtlVector<CUtlString> *p
 	m_mapToolsItems.Purge();
 	m_mapPaintKitTools.Purge();
 	m_mapBaseItems.Purge();
+	m_mapCustomItems.Purge();
+	m_mapWhitelistedItems.Purge();
 	m_vecBundles.Purge();
 	m_mapQuestObjectives.PurgeAndDeleteElements();
 
@@ -5342,6 +5352,21 @@ bool CEconItemSchema::BInitItems( KeyValues *pKVItems, CUtlVector<CUtlString> *p
 				{
 					m_mapBaseItems.Insert( nItemIndex, pItemDef );
 				}
+
+				if (pItemDef->IsCustomItem())
+				{
+					m_mapCustomItems.Insert(nItemIndex, pItemDef);
+				}
+
+				if (pItemDef->IsWhitelisted())
+				{
+					bool bIsSpecial = false;
+					if (!bIsSpecial)
+					{
+						m_mapWhitelistedItems.Insert(nItemIndex, pItemDef);
+					}
+				}
+
 
 				// Cache off bundles for the link phase below.
 				if ( pItemDef->IsBundle() )
@@ -6291,6 +6316,39 @@ bool CEconItemSchema::BInitCommunityMarketRemaps( KeyValues *pKVCommunityMarketR
 	}
 
 	return SCHEMA_INIT_SUCCESS();
+}
+
+bool CEconItemSchema::FindItemInWhitelist(int index)
+{
+	const CEconItemDefinition* pReskinItemDef = GetItemSchema()->GetItemDefinition(index);
+
+#if defined(TF_DLL) || defined(TF_CLIENT_DLL)
+	const CTFItemDefinition* pDef = dynamic_cast<const CTFItemDefinition*>(pReskinItemDef);
+	if (!pDef)
+		return false;
+#endif
+
+	if (pReskinItemDef != NULL)
+	{
+		bool bShouldLoad = pReskinItemDef->IsAllowed();
+#if defined(TF_DLL) || defined(TF_CLIENT_DLL)
+		bool bIsWeapon = ((pDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_PRIMARY) ||
+			(pDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_SECONDARY) ||
+			(pDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_MELEE) ||
+			(pDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_PDA) ||
+			(pDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_PDA2) ||
+			(pDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_BUILDING));
+#else
+		bool bIsWeapon = false; //????
+#endif
+		bool bFinalCheck = bShouldLoad;
+
+		// already on whitelist.
+		if (bFinalCheck)
+			return true;
+	}
+
+	return false;
 }
 
 //-----------------------------------------------------------------------------

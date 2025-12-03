@@ -1280,6 +1280,9 @@ public:
 	bool		IsImported( void ) const			{ return m_bImported; }
 	bool		IsAllowedInMatch( void ) const		{ return m_bAllowedInThisMatch; }
 	bool		IsBaseItem( void ) const			{ return m_bBaseItem; }
+	bool		IsCustomItem(void) const			{ return m_bCustomItem; }
+	bool		IsWhitelisted( void ) const			{ return m_bWhitelisted; }
+	bool		IsAllowed(void) const				{ return IsBaseItem() || IsWhitelisted() || IsCustomItem(); }
 	bool		IsBundle( void ) const				{ return m_BundleInfo != NULL; }
 	bool		HasProperName( void ) const			{ return m_bProperName; }
 	const char	*GetClassToken( void ) const		{ return m_pszClassToken; }
@@ -1600,6 +1603,8 @@ private:
 	bool			m_bHidden;
 	bool			m_bShouldShowInArmory;
 	bool			m_bBaseItem;
+	bool			m_bCustomItem;
+	bool			m_bWhitelisted;
 	bool			m_bImported;
 
 	// A pack bundle is a bundle that contains items that are not for sale individually
@@ -2610,6 +2615,12 @@ public:
 	typedef CUtlMap<int, CEconItemDefinition*, int>	BaseItemDefinitionMap_t;
 	const BaseItemDefinitionMap_t &GetBaseItemDefinitionMap() const { return m_mapBaseItems; }
 
+	typedef CUtlMap<int, CEconItemDefinition*, int>	CustomItemDefinitionMap_t;
+	const CustomItemDefinitionMap_t& GetCustomItemDefinitionMap() const { return m_mapCustomItems; }
+
+	typedef CUtlMap<int, CEconItemDefinition*, int>	WhitelistedItemDefinitionMap_t;
+	const WhitelistedItemDefinitionMap_t& GetWhitelistedItemDefinitionMap() const { return m_mapWhitelistedItems; }
+
 	typedef CUtlDict<CEconLootListDefinition *>	LootListDefinitionMap_t;
 	const LootListDefinitionMap_t &GetLootLists() const { return m_dictLootLists; }
 
@@ -2842,6 +2853,10 @@ private:
 	bool BInitCollectionReferences( CUtlVector<CUtlString> *pVecErrors );
 	bool BInitOperationDefinitions( KeyValues *pKVGameInfo, KeyValues *pOperations, CUtlVector<CUtlString> *pVecErrors );
 
+public:
+	bool FindItemInWhitelist(int index);
+private:
+
 #ifdef TF_CLIENT_DLL
 	bool BInitConcreteItemCounts( CUtlVector<CUtlString> *pVecErrors );
 	bool BInitSteamPackageLocalizationToken( KeyValues *pKVSteamPackages, CUtlVector<CUtlString> *pVecErrors );
@@ -2924,6 +2939,8 @@ private:
 
 	// List of all base items, is a sublist of mapItems
 	BaseItemDefinitionMap_t								m_mapBaseItems;
+	CustomItemDefinitionMap_t							m_mapCustomItems;
+	WhitelistedItemDefinitionMap_t						m_mapWhitelistedItems;
 
 #if defined(CLIENT_DLL) || defined(GAME_DLL)
 	// What is the default item definition we'll return in the client code if we can't find the correct one?

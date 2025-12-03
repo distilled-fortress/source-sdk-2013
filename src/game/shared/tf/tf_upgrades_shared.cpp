@@ -97,6 +97,9 @@ void CMannVsMachineUpgradeManager::ParseUpgradeBlockForUIGroup( KeyValues *pKV, 
 		m_Upgrades[ index ].nUIGroup = pData->GetInt( "ui_group", iDefaultUIGroup );
 		m_Upgrades[ index ].nQuality = pData->GetInt( "quality", MVM_UPGRADE_QUALITY_NORMAL );
 		m_Upgrades[ index ].nTier = pData->GetInt( "tier", 0 );
+		V_strncpy(m_Upgrades[index].szRequirement, pData->GetString("requirement", ""), sizeof(m_Upgrades[index].szIcon));
+		V_strncpy(m_Upgrades[index].szTag, pData->GetString("tag", "Normal"), sizeof(m_Upgrades[index].szIcon));
+		V_strncpy(m_Upgrades[index].szExpection, pData->GetString("expection", ""), sizeof(m_Upgrades[index].szIcon));
 	}
 }
 
@@ -185,7 +188,7 @@ void CMannVsMachineUpgradeManager::LoadUpgradesFileFromPath( const char *pszPath
 int GetUpgradeStepData( CTFPlayer *pPlayer, int nWeaponSlot, int nUpgradeIndex, int &nCurrentStep, bool &bOverCap )
 {
 	if ( !pPlayer )
-		return 0;
+		return 0;	
 
 	// Get the item entity. We use the entity, not the item in the loadout, because we want
 	// the dynamic attributes that have already been purchases and attached.

@@ -19,6 +19,9 @@ class CMannVsMachineUpgrades
 public:
 	char szAttrib[ MAX_ATTRIBUTE_DESCRIPTION_LENGTH ];
 	char szIcon[ MAX_PATH ];
+	char szRequirement[MAX_PATH];
+	char szTag[MAX_PATH];
+	char szExpection[MAX_PATH];
 	float flIncrement;
 	float flCap;
 	int nCost;

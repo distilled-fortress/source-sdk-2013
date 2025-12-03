@@ -8,7 +8,6 @@
 #include "cbase.h"
 
 #include "c_tf_upgrades.h"
-#include "tf_upgrades_shared.h"
 #include "dt_utlvector_recv.h"
 #include <vgui/ILocalize.h>
 #include <iinput.h>
@@ -70,6 +69,7 @@ CUpgradeBuyPanel::CUpgradeBuyPanel( Panel *parent, const char *panelName ) : Bas
 	m_nGridPositionY = 0;
 
 	m_bInspectMode = false;
+	m_bPrerequrites = true;
 }
 
 CUpgradeBuyPanel::~CUpgradeBuyPanel()
@@ -279,7 +279,7 @@ void CUpgradeBuyPanel::UpdateImages( int nCurrentMoney )
 		}
 		else
 		{
-			if ( nAffordability == CLCACHE_AFFORDABLE || nUpgradeButton >= nCurrentStep + nAffordability )
+			if ( (nAffordability == CLCACHE_AFFORDABLE || nUpgradeButton >= nCurrentStep + nAffordability) && m_bPrerequrites)
 			{
 				SetSkillTreeButtonColors( nUpgradeButton, CUpgradeBuyPanel::COLOR_SET_DEFAULT );
 
@@ -1076,6 +1076,46 @@ void CHudUpgradePanel::UpgradeItemInSlot( int iSlot )
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Set up for disabiling client upgrades. Most of the stuff was stolen from the server code but this should work regardless.
+//-----------------------------------------------------------------------------
+bool CHudUpgradePanel::HasUpgrade(C_TFPlayer* pPlayer, int iLoadoutSlot, CMannVsMachineUpgrades *pUpgrade)
+{
+	if (!TFGameRules())
+		return false;
+
+	if (!pPlayer)
+		return false;
+
+	//If it has no requirement skip this
+	if (!V_strcmp(pUpgrade->szRequirement, ""))
+		return true;
+
+	CEconItemView* pItem = NULL;
+
+	// Make sure the item slot is correct for attributes that need to attach to an item
+	if (pUpgrade->nUIGroup != UIGROUP_UPGRADE_ATTACHED_TO_PLAYER)
+	{
+		if (!(iLoadoutSlot == LOADOUT_POSITION_ACTION || (iLoadoutSlot >= LOADOUT_POSITION_PRIMARY && iLoadoutSlot <= LOADOUT_POSITION_PDA2)))
+		{
+			return false;
+		}
+
+		pItem = CTFPlayerSharedUtils::GetEconItemViewByLoadoutSlot(pPlayer, iLoadoutSlot);
+	}
+
+	// Surely this won't blow up in my face
+	CAttributeList* pAttrList = pUpgrade->nUIGroup == UIGROUP_UPGRADE_ATTACHED_TO_PLAYER
+		? pPlayer->GetAttributeList()
+		: pItem->GetAttributeList();
+
+	// If the attribute doesn't exist; we can't buy this item
+	if (pAttrList->GetAttributeByName(pUpgrade->szRequirement) == NULL)
+		return false;
+
+	return true;
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void CHudUpgradePanel::UpdateUpgradeButtons( void )
@@ -1135,6 +1175,7 @@ void CHudUpgradePanel::UpdateUpgradeButtons( void )
 				pUpgradeBuyPanel->m_nUpgradeIndex = i;
 				pUpgradeBuyPanel->m_nWeaponSlot = pItemSlotBuyPanel->nSlot;
 				pUpgradeBuyPanel->SetInspectMode( ( m_bInspectMode ) ? true : false );
+				pUpgradeBuyPanel->m_bPrerequrites = HasUpgrade(m_hPlayer, pItemSlotBuyPanel->nSlot, &(g_MannVsMachineUpgrades.m_Upgrades[i]));
 
 				// Store the item equipped at this time, so we can monitor for a change and mark the panel as dirty
 				CEconItemView *pCurItemData = CTFPlayerSharedUtils::GetEconItemViewByLoadoutSlot( m_hPlayer, pItemSlotBuyPanel->nSlot );
