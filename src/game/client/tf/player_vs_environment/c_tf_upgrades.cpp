@@ -1077,8 +1077,9 @@ void CHudUpgradePanel::UpgradeItemInSlot( int iSlot )
 
 //-----------------------------------------------------------------------------
 // Purpose: Set up for disabiling client upgrades. Most of the stuff was stolen from the server code but this should work regardless.
+//			Updated to be generic for exclusions.
 //-----------------------------------------------------------------------------
-bool CHudUpgradePanel::HasUpgrade(C_TFPlayer* pPlayer, int iLoadoutSlot, CMannVsMachineUpgrades *pUpgrade)
+bool CHudUpgradePanel::HasUpgrade(C_TFPlayer* pPlayer, int iLoadoutSlot, KeyValues *kvAttributes, int iUiGroup, const char *szAttrib, int iInclude)
 {
 	if (!TFGameRules())
 		return false;
@@ -1087,13 +1088,13 @@ bool CHudUpgradePanel::HasUpgrade(C_TFPlayer* pPlayer, int iLoadoutSlot, CMannVs
 		return false;
 
 	//If it has no requirement skip this
-	if (!V_strcmp(pUpgrade->szRequirement, ""))
+	if (kvAttributes == NULL)
 		return true;
 
 	CEconItemView* pItem = NULL;
 
 	// Make sure the item slot is correct for attributes that need to attach to an item
-	if (pUpgrade->nUIGroup != UIGROUP_UPGRADE_ATTACHED_TO_PLAYER)
+	if (iUiGroup != UIGROUP_UPGRADE_ATTACHED_TO_PLAYER)
 	{
 		if (!(iLoadoutSlot == LOADOUT_POSITION_ACTION || (iLoadoutSlot >= LOADOUT_POSITION_PRIMARY && iLoadoutSlot <= LOADOUT_POSITION_PDA2)))
 		{
@@ -1104,14 +1105,93 @@ bool CHudUpgradePanel::HasUpgrade(C_TFPlayer* pPlayer, int iLoadoutSlot, CMannVs
 	}
 
 	// Surely this won't blow up in my face
-	CAttributeList* pAttrList = pUpgrade->nUIGroup == UIGROUP_UPGRADE_ATTACHED_TO_PLAYER
+	CAttributeList* pAttrList = iUiGroup == UIGROUP_UPGRADE_ATTACHED_TO_PLAYER
 		? pPlayer->GetAttributeList()
 		: pItem->GetAttributeList();
 
 	// If the attribute doesn't exist; we can't buy this item
-	if (pAttrList->GetAttributeByName(pUpgrade->szRequirement) == NULL)
-		return false;
+	FOR_EACH_SUBKEY(kvAttributes, pKey)
+	{
+		const char* name = pKey->GetName();
+		const char* definition = pKey->GetString();
+		bool include = false;
 
+		if (!name)
+		{
+			Warning("Keyvalue name parsing error");
+			return false;
+		}
+
+		if (!definition)
+		{
+			Warning("Keyvalue definition parsing error");
+			return false;
+		}
+
+		if (Q_strlen(name) == 0)
+			continue;
+
+		if (Q_strlen(definition) == 0)
+			continue;
+
+		if (!V_stricmp(definition, "include"))
+		{
+			include = true;
+		}
+
+		//Pass the current upgrade given since it's not on the list yet
+		if (iInclude == 0 || V_strcmp(name, szAttrib))
+		{
+			if (pAttrList->GetAttributeByName(name))
+			{
+				if (include)
+				{
+					continue;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			else
+			{
+				if (!include)
+				{
+					continue;
+				}
+				else
+				{
+					return false;
+				}
+			}
+		}
+		else
+		{
+			if (iInclude == -1 && pAttrList->GetAttributeByName(name))
+			{
+				if (!include)
+				{
+					continue;
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			if (iInclude == 1 && GetItemSchema()->GetAttributeDefinitionByName(name))
+			{
+				if (include)
+				{
+					continue;
+				}
+				else
+				{
+					return false;
+				}
+			}
+		}
+	}
 	return true;
 }
 
@@ -1175,7 +1255,7 @@ void CHudUpgradePanel::UpdateUpgradeButtons( void )
 				pUpgradeBuyPanel->m_nUpgradeIndex = i;
 				pUpgradeBuyPanel->m_nWeaponSlot = pItemSlotBuyPanel->nSlot;
 				pUpgradeBuyPanel->SetInspectMode( ( m_bInspectMode ) ? true : false );
-				pUpgradeBuyPanel->m_bPrerequrites = HasUpgrade(m_hPlayer, pItemSlotBuyPanel->nSlot, &(g_MannVsMachineUpgrades.m_Upgrades[i]));
+				pUpgradeBuyPanel->m_bPrerequrites = HasUpgrade(m_hPlayer, pItemSlotBuyPanel->nSlot, pUpgrade->kvRequirements, nUIGroup);
 
 				// Store the item equipped at this time, so we can monitor for a change and mark the panel as dirty
 				CEconItemView *pCurItemData = CTFPlayerSharedUtils::GetEconItemViewByLoadoutSlot( m_hPlayer, pItemSlotBuyPanel->nSlot );
@@ -1649,6 +1729,9 @@ void CHudUpgradePanel::UpdateButtonStates( int nCurrentMoney, int nUpgrade /*= 0
 		int nUpgrades = pItemSlotBuyPanel->upgradeBuyPanels.Count();
 		bool bIsResistMax[4] = { 0 };
 
+		CMannVsMachineUpgrades* pReference = &(g_MannVsMachineUpgrades.m_Upgrades[nUpgrade]);
+		int iRef = 0;
+
 		FOR_EACH_VEC( pItemSlotBuyPanel->upgradeBuyPanels, i )
 		{
 			CUpgradeBuyPanel *pUpgradeBuyPanel = pItemSlotBuyPanel->upgradeBuyPanels[ i ];
@@ -1657,6 +1740,10 @@ void CHudUpgradePanel::UpdateButtonStates( int nCurrentMoney, int nUpgrade /*= 0
 			{
 				// Purchased or sold something
 				pUpgradeBuyPanel->m_nPurchases += nNumPurchased;
+				if (pUpgradeBuyPanel->m_nPurchases == 0)
+					iRef = -1;
+				else
+					iRef = 1;
 
 				KeyValues *kv = new KeyValues( "MVM_Upgrade" );
 				KeyValues *kvSub = new KeyValues( "upgrade" );
@@ -1734,6 +1821,15 @@ void CHudUpgradePanel::UpdateButtonStates( int nCurrentMoney, int nUpgrade /*= 0
 					}
 				}
 			}
+		}
+
+		//Second Iteration for panel state
+		FOR_EACH_VEC(pItemSlotBuyPanel->upgradeBuyPanels, i)
+		{
+			CUpgradeBuyPanel* pUpgradeBuyPanel = pItemSlotBuyPanel->upgradeBuyPanels[i];
+			CMannVsMachineUpgrades* pMannVsMachineUpgrade = &(g_MannVsMachineUpgrades.m_Upgrades[pUpgradeBuyPanel->m_nUpgradeIndex]);
+			pUpgradeBuyPanel->m_bPrerequrites = HasUpgrade(m_hPlayer, pItemSlotBuyPanel->nSlot, pMannVsMachineUpgrade->kvRequirements, pMannVsMachineUpgrade->nUIGroup, pReference->szAttrib, iRef);
+			pUpgradeBuyPanel->UpdateImages(nCurrentMoney);
 		}
 
 		// Check for ACHIEVEMENT_TF_MVM_MAX_PRIMARY_UPGRADES

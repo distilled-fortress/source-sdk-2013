@@ -97,7 +97,11 @@ void CMannVsMachineUpgradeManager::ParseUpgradeBlockForUIGroup( KeyValues *pKV, 
 		m_Upgrades[ index ].nUIGroup = pData->GetInt( "ui_group", iDefaultUIGroup );
 		m_Upgrades[ index ].nQuality = pData->GetInt( "quality", MVM_UPGRADE_QUALITY_NORMAL );
 		m_Upgrades[ index ].nTier = pData->GetInt( "tier", 0 );
-		V_strncpy(m_Upgrades[index].szRequirement, pData->GetString("requirement", ""), sizeof(m_Upgrades[index].szIcon));
+		KeyValues *pKVreqiurements = pData->FindKey("requirement");
+		if (pKVreqiurements)
+		{
+			m_Upgrades[index].kvRequirements = pKVreqiurements->MakeCopy();
+		}
 		V_strncpy(m_Upgrades[index].szTag, pData->GetString("tag", "Normal"), sizeof(m_Upgrades[index].szIcon));
 		V_strncpy(m_Upgrades[index].szExpection, pData->GetString("expection", ""), sizeof(m_Upgrades[index].szIcon));
 	}

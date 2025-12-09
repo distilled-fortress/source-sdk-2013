@@ -57,7 +57,10 @@
 			"increment"	"-0.1"				// percent
 			"cap"		"0.6"				// percent
 			"cost"		"200"				// first tier points/credits cost
-			"requirement"	"heal on kill"
+			"requirement"
+			{
+					"heal on kill"	"include"
+			}
 		}
 		"3"
 		{
@@ -329,6 +332,11 @@
 			"increment"	"2"				
 			"cap"		"4"			
 			"cost"		"350"
+			"requirement"
+			{
+					"heal on kill"	"include"
+					"armor piercing"	"exclude"
+			}
 		}
 		"34"
 		{
@@ -368,7 +376,12 @@
 			"icon"		"achievements/tf_get_turretkills"
 			"increment"	"25"
 			"cap"		"100"
-			"cost"		"400"	
+			"cost"		"400"
+			"requirement"
+			{
+					"heal on kill"	"include"
+					"critboost on kill"	"exclude"
+			}	
 		}
 		"40"
 		{

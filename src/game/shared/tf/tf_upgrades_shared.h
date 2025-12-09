@@ -19,7 +19,7 @@ class CMannVsMachineUpgrades
 public:
 	char szAttrib[ MAX_ATTRIBUTE_DESCRIPTION_LENGTH ];
 	char szIcon[ MAX_PATH ];
-	char szRequirement[MAX_PATH];
+	KeyValues *kvRequirements;
 	char szTag[MAX_PATH];
 	char szExpection[MAX_PATH];
 	float flIncrement;
@@ -28,6 +28,8 @@ public:
 	int nUIGroup;
 	int nQuality;
 	int nTier;		// If set, upgrades in the same tier - for the same player/item - will be mutually exclusive
+	CMannVsMachineUpgrades() { kvRequirements = NULL; }
+	//~CMannVsMachineUpgrades() { kvRequirements->deleteThis(); }
 };
 
 

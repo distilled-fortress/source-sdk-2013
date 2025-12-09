@@ -199,7 +199,7 @@ protected:
 	void			UpdateModelPanels( void );
 	virtual void	SetBorderForItem( CItemModelPanel *pItemPanel, bool bMouseOver );
 	void			UpgradeItemInSlot( int iSlot );
-	bool			HasUpgrade( C_TFPlayer *pPlayer, int iLoadoutSlot, CMannVsMachineUpgrades *pUpgrade );
+	bool			HasUpgrade( C_TFPlayer *pPlayer, int iLoadoutSlot, KeyValues *kAttributes, int iUiGroup, const char* szAttrib = NULL, int iInclude = 0);
 	void			UpdateUpgradeButtons( void );
 	void			UpdateButtonStates( int nCurrentCurrency, int nUpgrade = 0, int nNumPurchased = 0 );
 	void			UpdateJoystickControls( void );
